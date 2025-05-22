@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AudioProcessor } from './utils/audioProcessor';
 
 type ProcessingStage = 
   | 'idle'
@@ -49,15 +50,35 @@ export default function Home() {
     setProgress(0);
     setStage('loading');
     
+     try {
+        const processor = new AudioProcessor((progress) => {
+          setProgress(Math.round(progress * 100));
+          // Update stage based on progress
+          if (progress <= 0.3) {
+            setStage('loading');
+          } else if (progress <= 0.7) {
+            setStage('analyzing');
+          } else if (progress < 1) {
+            setStage('creating');
+          } else {
+            setStage('complete');
+          }
+        });
+        const transitionBlob = await processor.createTransition(song1, song2);
+        const url = URL.createObjectURL(transitionBlob);
+        setTransitionUrl(url);
+      } catch (err) {
+        setError('Error processing audio. Please try again with different files.');
+        console.error(err);
+      } finally {
+        setIsProcessing(false);
+      }
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-900 to-black text-white p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-center">DJMoody</h1>
-        <p className="text-xl mb-8 text-center text-gray-300">
-          Create seamless transitions between your favorite tracks
-        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div className="bg-gray-800 p-6 rounded-lg">
