@@ -22,8 +22,15 @@ export default function Home() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setSong: (file: File | null) => void) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Clean up previous transition URL if it exists
+      if (transitionUrl) {
+        URL.revokeObjectURL(transitionUrl);
+        setTransitionUrl(null);
+      }
       setSong(file);
       setError(null);
+      setProgress(0);
+      setStage('idle');
     }
   };
 
@@ -45,34 +52,40 @@ export default function Home() {
   const processTransition = async () => {
     if (!song1 || !song2) return;
     
+    // Clean up previous transition URL if it exists
+    if (transitionUrl) {
+      URL.revokeObjectURL(transitionUrl);
+      setTransitionUrl(null);
+    }
+    
     setIsProcessing(true);
     setError(null);
     setProgress(0);
     setStage('loading');
     
-     try {
-        const processor = new AudioProcessor((progress) => {
-          setProgress(Math.round(progress * 100));
-          // Update stage based on progress
-          if (progress <= 0.3) {
-            setStage('loading');
-          } else if (progress <= 0.7) {
-            setStage('analyzing');
-          } else if (progress < 1) {
-            setStage('creating');
-          } else {
-            setStage('complete');
-          }
-        });
-        const transitionBlob = await processor.createTransition(song1, song2);
-        const url = URL.createObjectURL(transitionBlob);
-        setTransitionUrl(url);
-      } catch (err) {
-        setError('Error processing audio. Please try again with different files.');
-        console.error(err);
-      } finally {
-        setIsProcessing(false);
-      }
+    try {
+      const processor = new AudioProcessor((progress) => {
+        setProgress(Math.round(progress * 100));
+        // Update stage based on progress
+        if (progress <= 0.3) {
+          setStage('loading');
+        } else if (progress <= 0.7) {
+          setStage('analyzing');
+        } else if (progress < 1) {
+          setStage('creating');
+        } else {
+          setStage('complete');
+        }
+      });
+      const transitionBlob = await processor.createTransition(song1, song2);
+      const url = URL.createObjectURL(transitionBlob);
+      setTransitionUrl(url);
+    } catch (err) {
+      setError('Error processing audio. Please try again with different files.');
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
