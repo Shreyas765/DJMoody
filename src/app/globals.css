@@ -63,4 +63,25 @@ a {
   .card {
     @apply bg-white shadow-md rounded-lg p-6 border border-gray-200;
   }
+
+  .glow-text {
+    @apply text-white;
+    text-shadow: 0 0 10px rgba(147, 51, 234, 0.5),
+                 0 0 20px rgba(147, 51, 234, 0.3),
+                 0 0 30px rgba(147, 51, 234, 0.2);
+  }
+
+  .glow-text-strong {
+    @apply text-white font-bold;
+    text-shadow: 0 0 15px rgba(147, 51, 234, 0.7),
+                 0 0 30px rgba(147, 51, 234, 0.5),
+                 0 0 45px rgba(147, 51, 234, 0.3);
+  }
+
+  .glow-text-purple {
+    @apply text-purple-400 font-bold;
+    text-shadow: 0 0 15px rgba(147, 51, 234, 0.7),
+                 0 0 30px rgba(147, 51, 234, 0.5),
+                 0 0 45px rgba(147, 51, 234, 0.3);
+  }
 }
