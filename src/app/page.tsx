@@ -138,7 +138,7 @@ export default function Home() {
           <button
             onClick={processTransition}
             disabled={!song1 || !song2 || isProcessing}
-            className={`px-8 py-3 rounded-full text-lg font-semibold ${
+            className={`px-8 py-3 rounded-full text-lg font-semibold glow-button ${
               !song1 || !song2 || isProcessing
                 ? 'bg-gray-600 cursor-not-allowed'
                 : 'bg-purple-600 hover:bg-purple-700 glow-text'
@@ -163,7 +163,7 @@ export default function Home() {
         )}
 
         {transitionUrl && (
-          <div className="mt-8 bg-gray-800 p-6 rounded-lg">
+          <div className="mt-8 bg-gray-900 p-6 rounded-lg">
             <h2 className="text-2xl font-semibold mb-4 glow-text">Your Transition</h2>
             <audio controls className="w-full">
               <source src={transitionUrl} type="audio/mpeg" />
@@ -173,7 +173,7 @@ export default function Home() {
               <a
                 href={transitionUrl}
                 download="transition.mp3"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg glow-text"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg glow-text glow-button"
               >
                 Download Transition
               </a>
