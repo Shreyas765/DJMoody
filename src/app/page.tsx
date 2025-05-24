@@ -89,8 +89,17 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-900 to-black text-white p-8 flex flex-col">
-      <div className="max-w-4xl mx-auto flex-grow">
+    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-950 text-white p-8 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-600/20 to-transparent animate-wave"></div>
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-purple-800/20 to-transparent animate-wave-reverse"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-900/20 rounded-full blur-3xl animate-pulse-slow"></div>
+          <div className="absolute top-0 left-0 w-96 h-96 bg-purple-800/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+        </div>
+      </div>
+      <div className="max-w-4xl mx-auto flex-grow relative z-10">
         <h1 className="text-6xl font-bold mb-24 text-center">
           <span className="glow-text-strong">DJ</span>
           <span className="glow-text-purple">Moody</span>
