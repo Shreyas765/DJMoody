@@ -32,8 +32,8 @@ export class AudioProcessor {
 
   // Find beats in the audio using a simple energy-based approach
   private findBeats(channelData: Float32Array, sampleRate: number): BeatInfo {
-    // Use 40ms windows for analysis
-    const windowSize = Math.floor(sampleRate * 0.04);
+    // Use 100ms windows for analysis
+    const windowSize = Math.floor(sampleRate * 0.1);
     const hopSize = Math.floor(windowSize / 4);
     const minBeatInterval = Math.floor(sampleRate * 0.35);
     
