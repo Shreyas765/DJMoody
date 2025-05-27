@@ -15,9 +15,16 @@ interface MixPoint {
 
 export class AudioProcessor {
   private onProgress?: (progress: number) => void;
+  private bpmDetective: any;
 
   constructor(onProgress?: (progress: number) => void) {
     this.onProgress = onProgress;
+    // Initialize bpmDetective only on client side
+    if (typeof window !== 'undefined') {
+      import('bpm-detective').then(module => {
+        this.bpmDetective = module.default;
+      });
+    }
   }
 
   // Load audio file into memory
@@ -67,8 +74,19 @@ export class AudioProcessor {
       }
     }
 
-    // Calculate final BPM and confidence
-    const bpm = this.calculateBPM(beats, sampleRate);
+    // Create a temporary AudioBuffer for bpm-detective
+    let bpm = 120; // Default BPM
+    if (typeof window !== 'undefined' && this.bpmDetective) {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const tempBuffer = audioContext.createBuffer(1, channelData.length, sampleRate);
+      tempBuffer.copyToChannel(channelData, 0);
+
+      // Get BPM using bpm-detective
+      bpm = this.bpmDetective(tempBuffer);
+      console.log(`Detected BPM: ${bpm}`);
+    }
+
+    // Calculate confidence based on beat consistency
     const confidence = this.calculateConfidence(beats);
 
     // Keep BPM in a reasonable range
@@ -84,19 +102,6 @@ export class AudioProcessor {
     const sorted = [...energies].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     return median * 1.5; // This multiplier seems to work well
-  }
-
-  // Calculate BPM from beat intervals
-  private calculateBPM(beats: number[], sampleRate: number): number {
-    if (beats.length < 2) return 120; // Default BPM if not enough beats
-
-    const intervals = [];
-    for (let i = 1; i < beats.length; i++) {
-      intervals.push(beats[i] - beats[i - 1]);
-    }
-    
-    const avgInterval = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
-    return (60 * sampleRate) / avgInterval;
   }
 
   // Calculate how confident we are in our beat detection
