@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AudioProcessor } from './utils/audioProcessor';
 
 type ProcessingStage = 
@@ -10,6 +10,8 @@ type ProcessingStage =
   | 'creating'
   | 'complete';
 
+type BpmCompatibility = 'excellent' | 'mid' | 'poor';
+
 export default function Home() {
   const [song1, setSong1] = useState<File | null>(null);
   const [song2, setSong2] = useState<File | null>(null);
@@ -18,6 +20,20 @@ export default function Home() {
   const [stage, setStage] = useState<ProcessingStage>('idle');
   const [transitionUrl, setTransitionUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [bpm1, setBpm1] = useState<number | null>(null);
+  const [bpm2, setBpm2] = useState<number | null>(null);
+  const [bpmCompatibility, setBpmCompatibility] = useState<BpmCompatibility | null>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      setMousePosition({ x: clientX, y: clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setSong: (file: File | null) => void) => {
     const file = e.target.files?.[0];
@@ -31,6 +47,9 @@ export default function Home() {
       setError(null);
       setProgress(0);
       setStage('idle');
+      setBpm1(null);
+      setBpm2(null);
+      setBpmCompatibility(null);
     }
   };
 
@@ -49,6 +68,19 @@ export default function Home() {
     }
   };
 
+  const evaluateBpmCompatibility = (bpm1: number, bpm2: number): BpmCompatibility => {
+    const difference = Math.abs(bpm1 - bpm2);
+    const percentageDiff = (difference / Math.min(bpm1, bpm2)) * 100;
+    
+    if (percentageDiff <= 5) {
+      return 'excellent';
+    } else if (percentageDiff <= 10) {
+      return 'mid';
+    } else {
+      return 'poor';
+    }
+  };
+
   const processTransition = async () => {
     if (!song1 || !song2) return;
     
@@ -62,6 +94,9 @@ export default function Home() {
     setError(null);
     setProgress(0);
     setStage('loading');
+    setBpm1(null);
+    setBpm2(null);
+    setBpmCompatibility(null);
     
     try {
       const processor = new AudioProcessor((progress) => {
@@ -77,9 +112,12 @@ export default function Home() {
           setStage('complete');
         }
       });
-      const transitionBlob = await processor.createTransition(song1, song2);
-      const url = URL.createObjectURL(transitionBlob);
+      const { blob, bpm1, bpm2 } = await processor.createTransition(song1, song2);
+      const url = URL.createObjectURL(blob);
       setTransitionUrl(url);
+      setBpm1(bpm1);
+      setBpm2(bpm2);
+      setBpmCompatibility(evaluateBpmCompatibility(bpm1, bpm2));
     } catch (err) {
       setError('Error processing audio. Please try again with different files.');
       console.error(err);
@@ -97,6 +135,13 @@ export default function Home() {
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-purple-800/20 to-transparent animate-wave-reverse"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-900/20 rounded-full blur-3xl animate-pulse-slow"></div>
           <div className="absolute top-0 left-0 w-96 h-96 bg-purple-800/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
+          {/* Cursor-following element */}
+          <div 
+            className="absolute w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-3xl transition-transform duration-200 ease-out"
+            style={{
+              transform: `translate(${mousePosition.x - 250}px, ${mousePosition.y - 250}px)`,
+            }}
+          />
         </div>
       </div>
       <div className="max-w-4xl mx-auto flex-grow relative z-10">
@@ -168,6 +213,32 @@ export default function Home() {
             <p className="text-sm text-gray-400 text-center glow-text">
               {getStageMessage(stage, progress)}
             </p>
+          </div>
+        )}
+
+        {bpm1 && bpm2 && bpmCompatibility && (
+          <div className="mt-8 bg-gray-900 p-6 rounded-lg">
+            <h2 className="text-2xl font-semibold mb-4 glow-text">BPM Analysis</h2>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">First Song's Calcualted BPM:</span>
+                <span className="font-semibold">{bpm1}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Second Song's Calcualted BPM:</span>
+                <span className="font-semibold">{bpm2}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Compatibility:</span>
+                <span className={`font-semibold ${
+                  bpmCompatibility === 'excellent' ? 'text-green-400' :
+                  bpmCompatibility === 'mid' ? 'text-yellow-400' :
+                  'text-red-400'
+                }`}>
+                  {bpmCompatibility.charAt(0).toUpperCase() + bpmCompatibility.slice(1)}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

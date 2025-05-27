@@ -415,7 +415,7 @@ export class AudioProcessor {
   }
 
   // Main function to create a transition between two songs
-  async createTransition(song1: File, song2: File, removeVocals: boolean = false): Promise<Blob> {
+  async createTransition(song1: File, song2: File, removeVocals: boolean = false): Promise<{ blob: Blob; bpm1: number; bpm2: number }> {
     try {
       // Make sure Tone.js is running
       if (Tone.getContext().state !== 'running') {
@@ -476,7 +476,11 @@ export class AudioProcessor {
       this.onProgress?.(1);
       audioContext.close();
       
-      return blob;
+      return {
+        blob,
+        bpm1: beatInfo1.bpm,
+        bpm2: beatInfo2.bpm
+      };
       
     } catch (error) {
       console.error('Error creating mix:', error);
