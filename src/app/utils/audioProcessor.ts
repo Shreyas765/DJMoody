@@ -214,7 +214,7 @@ export class AudioProcessor {
   ): Promise<AudioBuffer> {
     
     const sampleRate = buffer1.sampleRate;
-    const mixDuration = 20; // 20 second mix
+    const mixDuration = 30; // 30 second mix
     const mixSamples = Math.floor(mixDuration * sampleRate);
     const channels = Math.max(buffer1.numberOfChannels, buffer2.numberOfChannels);
     
