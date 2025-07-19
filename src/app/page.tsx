@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AudioProcessor } from './utils/audioProcessor';
+import { EnergyDetector, EnergyAnalysis } from './utils/energyDetector';
 
 type ProcessingStage = 
   | 'idle'
@@ -24,6 +25,8 @@ export default function Home() {
   const [bpm1, setBpm1] = useState<number | null>(null);
   const [bpm2, setBpm2] = useState<number | null>(null);
   const [bpmCompatibility, setBpmCompatibility] = useState<BpmCompatibility | null>(null);
+  const [energyAnalysis, setEnergyAnalysis] = useState<EnergyAnalysis | null>(null);
+  const [isAnalyzingEnergy, setIsAnalyzingEnergy] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -50,6 +53,7 @@ export default function Home() {
       setBpm1(null);
       setBpm2(null);
       setBpmCompatibility(null);
+      setEnergyAnalysis(null);
     }
   };
 
@@ -97,6 +101,7 @@ export default function Home() {
     setBpm1(null);
     setBpm2(null);
     setBpmCompatibility(null);
+    setEnergyAnalysis(null);
     
     try {
       const processor = new AudioProcessor((progress) => {
@@ -118,12 +123,32 @@ export default function Home() {
       setBpm1(bpm1);
       setBpm2(bpm2);
       setBpmCompatibility(evaluateBpmCompatibility(bpm1, bpm2));
+      
+      // Analyze energy level of the transition
+      setIsAnalyzingEnergy(true);
+      try {
+        const audioBuffer = await blobToAudioBuffer(blob);
+        const energyResult = await EnergyDetector.analyzeEnergy(audioBuffer);
+        setEnergyAnalysis(energyResult);
+      } catch (energyError) {
+        console.error('Energy analysis failed:', energyError);
+        setError('Transition created successfully, but energy analysis failed.');
+      } finally {
+        setIsAnalyzingEnergy(false);
+      }
     } catch (err) {
       setError('Error processing audio. Please try again with different files.');
       console.error(err);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Helper function to convert blob to AudioBuffer
+  const blobToAudioBuffer = async (blob: Blob): Promise<AudioBuffer> => {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    return await audioContext.decodeAudioData(arrayBuffer);
   };
 
   return (
@@ -218,7 +243,22 @@ export default function Home() {
 
         {bpm1 && bpm2 && bpmCompatibility && (
           <div className="mt-8 bg-gray-900 p-6 rounded-lg">
-            <h2 className="text-2xl font-semibold mb-4 glow-text">BPM Analysis</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-2xl font-semibold glow-text">BPM Analysis</h2>
+              <div className="relative group">
+                <button className="w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-sm font-bold transition-colors">
+                  ?
+                </button>
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none max-w-xl z-20">
+                  <div className="space-y-1">
+                    <div><span className="text-green-400 font-semibold">Excellent:</span> Songs within 5% BPM difference</div>
+                    <div><span className="text-yellow-400 font-semibold">Mid:</span> Songs within 10% BPM difference</div>
+                    <div><span className="text-red-400 font-semibold">Poor:</span> Songs with more than 10% BPM difference</div>
+                  </div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">First Song's Calcualted BPM:</span>
@@ -237,6 +277,74 @@ export default function Home() {
                 }`}>
                   {bpmCompatibility.charAt(0).toUpperCase() + bpmCompatibility.slice(1)}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isAnalyzingEnergy && (
+          <div className="mt-8 bg-gray-900 p-6 rounded-lg">
+            <h2 className="text-2xl font-semibold mb-4 glow-text">Energy Detection</h2>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
+              <p className="mt-2 text-gray-400 glow-text">Analyzing energy level...</p>
+            </div>
+          </div>
+        )}
+
+        {energyAnalysis && (
+          <div className="mt-8 bg-gray-900 p-6 rounded-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-2xl font-semibold glow-text">Energy Detection</h2>
+              <div className="relative group">
+                <button className="w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-sm font-bold transition-colors">
+                  ?
+                </button>
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none max-w-xl z-20">
+                  A machine learning model analyzes your music to determine energy levels by examining tempo, rhythm intensity, and frequency distribution patterns
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Energy Level:</span>
+                <span className="font-semibold text-purple-400 glow-text">
+                  {energyAnalysis.energy_level}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400">Confidence:</span>
+                <span className="font-semibold">
+                  {(energyAnalysis.confidence * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="mt-4">
+                <span className="text-gray-400 block mb-2">All Energy Levels:</span>
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(energyAnalysis.probabilities).map(([level, probability]) => (
+                    <div key={level} className="flex justify-between items-center">
+                      <span className={`text-sm ${
+                        level === energyAnalysis.energy_level ? 'text-purple-400 font-semibold' : 'text-gray-400'
+                      }`}>
+                        {level}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-20 bg-gray-700 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              level === energyAnalysis.energy_level ? 'bg-purple-400' : 'bg-gray-500'
+                            }`}
+                            style={{ width: `${(probability * 100)}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-400 w-8">
+                          {(probability * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
