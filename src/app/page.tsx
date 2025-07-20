@@ -35,6 +35,10 @@ export default function Home() {
     };
 
     window.addEventListener('mousemove', handleMouseMove);
+    
+    // Make EnergyDetector available globally for testing
+    (window as any).EnergyDetector = EnergyDetector;
+    
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
