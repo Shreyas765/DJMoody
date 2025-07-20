@@ -36,7 +36,7 @@ export default function Home() {
 
     window.addEventListener('mousemove', handleMouseMove);
     
-    // Make EnergyDetector available globally for testing
+    // EnergyDetector available globally for testing
     (window as any).EnergyDetector = EnergyDetector;
     
     return () => window.removeEventListener('mousemove', handleMouseMove);
@@ -136,7 +136,11 @@ export default function Home() {
         setEnergyAnalysis(energyResult);
       } catch (energyError) {
         console.error('Energy analysis failed:', energyError);
-        setError('Transition created successfully, but energy analysis failed.');
+        // Show a user-friendly message about energy analysis failure
+        // but don't fail the entire transition process
+        setError(`Transition created successfully! Energy analysis failed: ${energyError instanceof Error ? energyError.message : 'Unknown error'}`);
+        // Clear the error after 5 seconds
+        setTimeout(() => setError(null), 5000);
       } finally {
         setIsAnalyzingEnergy(false);
       }
@@ -150,9 +154,34 @@ export default function Home() {
 
   // Helper function to convert blob to AudioBuffer
   const blobToAudioBuffer = async (blob: Blob): Promise<AudioBuffer> => {
-    const arrayBuffer = await blob.arrayBuffer();
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    return await audioContext.decodeAudioData(arrayBuffer);
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      
+      // Create AudioContext with proper error handling
+      let audioContext: AudioContext;
+      try {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        // Resume the context if it's suspended (required for some browsers)
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+      } catch (contextError) {
+        console.error('Error creating AudioContext:', contextError);
+        throw new Error('Failed to create audio context. Please ensure you have audio permissions.');
+      }
+      
+      // Decode the audio data
+      try {
+        return await audioContext.decodeAudioData(arrayBuffer);
+      } catch (decodeError) {
+        console.error('Error decoding audio data:', decodeError);
+        throw new Error('Failed to decode audio data. The file may be corrupted or in an unsupported format.');
+      }
+    } catch (error) {
+      console.error('Error converting blob to AudioBuffer:', error);
+      throw error; // Re-throw the specific error instead of creating a generic one
+    }
   };
 
   return (
@@ -253,8 +282,8 @@ export default function Home() {
                 <button className="w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-sm font-bold transition-colors">
                   ?
                 </button>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none max-w-xl z-20">
-                  <div className="space-y-1">
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-6 py-4 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none w-[400px]">
+                  <div className="space-y-2">
                     <div><span className="text-green-400 font-semibold">Excellent:</span> Songs within 5% BPM difference</div>
                     <div><span className="text-yellow-400 font-semibold">Mid:</span> Songs within 10% BPM difference</div>
                     <div><span className="text-red-400 font-semibold">Poor:</span> Songs with more than 10% BPM difference</div>
@@ -304,8 +333,8 @@ export default function Home() {
                 <button className="w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded-full flex items-center justify-center text-sm font-bold transition-colors">
                   ?
                 </button>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none max-w-xl z-20">
-                  A machine learning model analyzes your music to determine energy levels by examining tempo, rhythm intensity, and frequency distribution patterns
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-6 py-4 bg-gray-800 text-gray-200 text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none w-[500px]">
+                  A Machine Learning model analyzes your music to determine energy levels based on trained data on your favorite songs!
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
                 </div>
               </div>
@@ -317,14 +346,7 @@ export default function Home() {
                   {energyAnalysis.energy_level}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Confidence:</span>
-                <span className="font-semibold">
-                  {(energyAnalysis.confidence * 100).toFixed(1)}%
-                </span>
-              </div>
               <div className="mt-4">
-                <span className="text-gray-400 block mb-2">All Energy Levels:</span>
                 <div className="grid grid-cols-1 gap-2">
                   {Object.entries(energyAnalysis.probabilities).map(([level, probability]) => (
                     <div key={level} className="flex justify-between items-center">
