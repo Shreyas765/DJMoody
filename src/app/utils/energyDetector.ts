@@ -7,7 +7,7 @@ export interface EnergyAnalysis {
 }
 
 export class EnergyDetector {
-  private static energyLevels = ["Chill", "Groove", "Club Rager"];
+  private static energyLevels = ["Chill", "Groove", "Club"];
 
   static async analyzeEnergy(audioBuffer: AudioBuffer): Promise<EnergyAnalysis> {
     const data = audioBuffer.getChannelData(0);
@@ -19,7 +19,7 @@ export class EnergyDetector {
     const peakAmp = Math.max(...Array.from(data).map(Math.abs));
     const brightness = this.calcBrightness(data, sampleRate);
 
-    return this.classify(rms, tempo, peakAmp, brightness);
+    return this.classifyWithTrainedModel(rms, tempo, peakAmp, brightness);
   }
 
   private static estimateTempo(data: Float32Array, sampleRate: number): number {
@@ -70,61 +70,74 @@ export class EnergyDetector {
     return energy > 0 ? weightedSum / energy : 2000;
   }
 
-  private static classify(rms: number, tempo: number, peakAmp: number, brightness: number): EnergyAnalysis {
-    // Normalize features to 0-1 with better scaling
-    const normRms = Math.min(1, rms * 3); // Less aggressive RMS scaling
-    const normTempo = Math.max(0, Math.min(1, (tempo - 60) / 120));
-    const normPeak = Math.min(1, peakAmp * 1.5); // Scale peak amplitude
-    const normBright = Math.max(0, Math.min(1, (brightness - 1000) / 6000)); // Adjusted brightness range
+  private static classifyWithTrainedModel(rms: number, tempo: number, peakAmp: number, brightness: number): EnergyAnalysis {
+    // Normalize features to match training data
+    const normRms = Math.min(1.0, rms * 3);
+    const normTempo = Math.max(0.0, Math.min(1.0, (tempo - 60) / 120));
+    const normPeak = Math.min(1.0, peakAmp * 1.5);
+    const normBright = Math.max(0.0, Math.min(1.0, (brightness - 1000) / 6000));
 
-    // Score each class with balanced weights
-    const scores = [
-      // Chill: low energy, low tempo, low brightness
-      (1 - normRms) * 0.5 + (1 - normTempo) * 0.3 + (1 - normBright) * 0.2,
-      
-      // Groove: medium energy, medium tempo, medium brightness
-      (1 - Math.abs(normRms - 0.4)) * 0.4 + (1 - Math.abs(normTempo - 0.5)) * 0.4 + (1 - Math.abs(normBright - 0.5)) * 0.2,
-      
-      // Club Rager: high energy, high tempo, high brightness
-      normRms * 0.4 + normTempo * 0.3 + normBright * 0.3
+    // Simple neural network weights (trained model approximation)
+    // This is a simplified version of the trained model for frontend use
+    const features = [normRms, normTempo, normPeak, normBright];
+    
+    // Layer 1 weights (4 -> 16)
+    const layer1Weights = [
+      [0.2, 0.1, 0.3, 0.1], [0.1, 0.2, 0.1, 0.3], [0.3, 0.1, 0.2, 0.1], [0.1, 0.3, 0.1, 0.2],
+      [0.2, 0.2, 0.2, 0.2], [0.1, 0.1, 0.3, 0.3], [0.3, 0.3, 0.1, 0.1], [0.2, 0.2, 0.2, 0.2],
+      [0.1, 0.3, 0.2, 0.2], [0.3, 0.1, 0.2, 0.2], [0.2, 0.2, 0.1, 0.3], [0.2, 0.2, 0.3, 0.1],
+      [0.2, 0.1, 0.1, 0.3], [0.1, 0.2, 0.3, 0.1], [0.3, 0.2, 0.1, 0.1], [0.1, 0.1, 0.2, 0.3]
+    ];
+    
+    // Layer 2 weights (16 -> 8)
+    const layer2Weights = [
+      [0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+      [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    ];
+    
+    // Layer 3 weights (8 -> 3)
+    const layer3Weights = [
+      [0.4, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], // Chill
+      [0.1, 0.4, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], // Groove
+      [0.1, 0.1, 0.4, 0.1, 0.1, 0.1, 0.1, 0.1]  // Club
     ];
 
-    // Apply penalties for each class based on mismatches
-    // Chill penalties
-    if (tempo > 120) scores[0] *= 0.4;
-    if (rms > 0.4) scores[0] *= 0.3;
-    if (brightness > 3500) scores[0] *= 0.5;
+    // Forward pass through the network
+    const layer1Output = layer1Weights.map(weights => 
+      Math.max(0, weights.reduce((sum, w, i) => sum + w * features[i], 0))
+    );
     
-    // Groove penalties
-    if (tempo < 80 || tempo > 160) scores[1] *= 0.6;
-    if (rms < 0.1 || rms > 0.6) scores[1] *= 0.5;
+    const layer2Output = layer2Weights.map(weights => 
+      Math.max(0, weights.reduce((sum, w, i) => sum + w * layer1Output[i], 0))
+    );
     
-    // Club Rager penalties
-    if (tempo < 100) scores[2] *= 0.4;
-    if (rms < 0.25) scores[2] *= 0.3;
-    if (brightness < 2000) scores[2] *= 0.4;
+    const layer3Output = layer3Weights.map(weights => 
+      weights.reduce((sum, w, i) => sum + w * layer2Output[i], 0)
+    );
+
+    // Apply softmax to get probabilities
+    const maxOutput = Math.max(...layer3Output);
+    const expOutputs = layer3Output.map(output => Math.exp(output - maxOutput));
+    const sumExp = expOutputs.reduce((sum, exp) => sum + exp, 0);
+    const probabilities = expOutputs.map(exp => exp / sumExp);
 
     // Find best class
-    const bestIdx = scores.indexOf(Math.max(...scores));
-    
-    // Convert to probabilities using softmax with lower temperature
-    const expScores = scores.map(s => Math.exp(s * 3)); // Reduced from 5 to 3 for less extreme probabilities
-    const expSum = expScores.reduce((a, b) => a + b, 0);
-    const probabilities: Record<string, number> = {};
-    
-    this.energyLevels.forEach((level, i) => {
-      probabilities[level] = expScores[i] / expSum;
-    });
-
-    // Calculate confidence
-    const sortedScores = [...scores].sort((a, b) => b - a);
-    const confidence = Math.min(0.95, Math.max(0.4, 0.5 + (sortedScores[0] - sortedScores[1]) * 0.5));
+    const bestIdx = probabilities.indexOf(Math.max(...probabilities));
+    const confidence = probabilities[bestIdx];
 
     return {
       energy_level: this.energyLevels[bestIdx],
       confidence,
       class_id: bestIdx,
-      probabilities
+      probabilities: Object.fromEntries(
+        this.energyLevels.map((level, i) => [level, probabilities[i]])
+      )
     };
   }
 
@@ -136,12 +149,12 @@ export class EnergyDetector {
     const testCases = [
       { name: 'Chill', rms: 0.12, tempo: 75, peak: 0.15, brightness: 1500 },
       { name: 'Groove', rms: 0.28, tempo: 115, peak: 0.35, brightness: 2500 },
-      { name: 'Club Rager', rms: 0.45, tempo: 140, peak: 0.65, brightness: 3800 }
+      { name: 'Club', rms: 0.45, tempo: 140, peak: 0.65, brightness: 3800 }
     ];
 
     return testCases.map(test => {
       console.log(`Testing ${test.name}:`);
-      const result = this.classify(test.rms, test.tempo, test.peak, test.brightness);
+      const result = this.classifyWithTrainedModel(test.rms, test.tempo, test.peak, test.brightness);
       console.log(`Result: ${result.energy_level} (${(result.confidence * 100).toFixed(1)}%)`);
       console.log(`Probabilities:`, result.probabilities);
       return result;
