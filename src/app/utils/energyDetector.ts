@@ -22,7 +22,6 @@ export class EnergyDetector {
       }
 
       const data = audioBuffer.getChannelData(0);
-      const sampleRate = audioBuffer.sampleRate;
 
       // Validate data
       if (!data || data.length === 0) {

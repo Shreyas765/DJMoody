@@ -37,7 +37,7 @@ export default function Home() {
     window.addEventListener('mousemove', handleMouseMove);
     
     // EnergyDetector available globally for testing
-    (window as any).EnergyDetector = EnergyDetector;
+    (window as unknown as { EnergyDetector: typeof EnergyDetector }).EnergyDetector = EnergyDetector;
     
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
@@ -160,7 +160,7 @@ export default function Home() {
       // Create AudioContext with proper error handling
       let audioContext: AudioContext;
       try {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
         
         // Resume the context if it's suspended (required for some browsers)
         if (audioContext.state === 'suspended') {
@@ -294,11 +294,11 @@ export default function Home() {
             </div>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">First Song's Calcualted BPM:</span>
+                <span className="text-gray-400">First Song&apos;s Calculated BPM:</span>
                 <span className="font-semibold">{bpm1}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Second Song's Calcualted BPM:</span>
+                <span className="text-gray-400">Second Song&apos;s Calculated BPM:</span>
                 <span className="font-semibold">{bpm2}</span>
               </div>
               <div className="flex justify-between items-center">

@@ -15,7 +15,7 @@ interface MixPoint {
 
 export class AudioProcessor {
   private onProgress?: (progress: number) => void;
-  private bpmDetective: any;
+  private bpmDetective: ((buffer: AudioBuffer) => number) | null = null;
 
   constructor(onProgress?: (progress: number) => void) {
     this.onProgress = onProgress;
@@ -77,7 +77,7 @@ export class AudioProcessor {
     // Create a temporary AudioBuffer for bpm-detective
     let bpm = 120; // Default BPM
     if (typeof window !== 'undefined' && this.bpmDetective) {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       const tempBuffer = audioContext.createBuffer(1, channelData.length, sampleRate);
       tempBuffer.copyToChannel(channelData, 0);
 
@@ -208,9 +208,7 @@ export class AudioProcessor {
     buffer1: AudioBuffer, 
     buffer2: AudioBuffer, 
     mixPoint1: MixPoint, 
-    mixPoint2: MixPoint,
-    beatInfo1: BeatInfo,
-    beatInfo2: BeatInfo
+    mixPoint2: MixPoint
   ): Promise<AudioBuffer> {
     
     const sampleRate = buffer1.sampleRate;
@@ -305,7 +303,6 @@ export class AudioProcessor {
     
     for (let channel = 0; channel < channels; channel++) {
       const newData = newBuffer.getChannelData(channel);
-      const originalData = buffer.getChannelData(channel);
       
       for (let i = 0; i < buffer.length; i++) {
         const center = (leftChannel[i] + rightChannel[i]) / 2;
@@ -437,7 +434,7 @@ export class AudioProcessor {
       this.onProgress?.(0.3);
 
       // Decode the audio
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       let [audioBuffer1, audioBuffer2] = await Promise.all([
         audioContext.decodeAudioData(buffer1.slice(0)),
         audioContext.decodeAudioData(buffer2.slice(0))
@@ -467,9 +464,7 @@ export class AudioProcessor {
         audioBuffer1, 
         audioBuffer2, 
         mixPoints.point1, 
-        mixPoints.point2,
-        beatInfo1,
-        beatInfo2
+        mixPoints.point2
       );
       
       this.onProgress?.(0.9);
