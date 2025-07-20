@@ -203,7 +203,7 @@ export default function Home() {
         </div>
       </div>
       <div className="max-w-4xl mx-auto flex-grow relative z-10">
-        <h1 className="text-6xl font-bold mb-24 text-center">
+        <h1 className="text-6xl font-black mb-24 text-center tracking-wider" style={{ fontFamily: 'Orbitron, monospace' }}>
           <span className="glow-text-strong">DJ</span>
           <span className="glow-text-purple">Moody</span>
         </h1>
